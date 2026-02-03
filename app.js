@@ -27,9 +27,8 @@ const state = {
       imageUrl:
         "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80",
       price: 780,
-      status: "claimed_by_other",
-      claimedBy: "Алина",
-      state: "selected_by_other",
+      status: "available",
+      state: "available",
     },
     {
       id: "wine",
@@ -158,33 +157,33 @@ const lockSelection = () => {
     if (item) {
       item.status = "locked";
       item.state = "selected_by_other";
+      item.paidBy = "Вы";
+      item.paidAt = new Date();
     }
   });
 };
 
 const renderBillOverview = () => {
   root.innerHTML = `
-    <section class="card summary-card">
-      <div class="summary-left">
-        <div class="summary-title">Стол №12</div>
-        <div class="summary-meta">
-          <span>Активный счёт</span>
-          <span class="dot-sep"></span>
-          <span>Заказ продолжается</span>
+    <section class="card bill-card">
+      <div class="bill-card__left">
+        <div class="bill-card__title-row">
+          <h1 class="bill-card__title">Стол №12</h1>
+          <span class="bill-card__badge">заказ продолжается</span>
         </div>
-        <div class="summary-meta summary-sub">
-          <span>Открыт: 08 янв.</span>
-          <span class="dot-sep"></span>
-          <span>01:04</span>
-        </div>
-        <div class="summary-total">
-          <span>Общий счёт</span>
-          <strong>${format(remainingBill())}</strong>
+        <div class="bill-card__meta">Активный счёт</div>
+        <div class="bill-card__submeta">Открыт: 08 Января 01:04</div>
+        <div class="bill-card__total">
+          <span class="bill-card__total-label">Общий счёт</span>
+          <span class="bill-card__total-value">${format(remainingBill())}</span>
         </div>
       </div>
-      <div class="summary-right">
-        <div class="qr-box">
-          <div class="qr-grid"></div>
+      <div class="bill-card__right">
+        <div class="bill-card__qr">
+          <img
+            src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=table-12"
+            alt="QR code"
+          />
         </div>
       </div>
     </section>
@@ -203,7 +202,7 @@ const renderBillOverview = () => {
       }>
         Оплатить выбранное
       </button>
-      <button class="cta cta--ghost" id="split-bill">Разделить счёт</button>
+      <button class="cta cta--dark" id="split-bill">Разделить счёт</button>
       <button class="cta cta--ghost" id="pay-all">Оплатить всё</button>
     </div>
   `;
@@ -278,22 +277,23 @@ const renderOption = (value, label, meta) => {
 const renderEntryItem = (item) => {
   const disabled = item.state === "selected_by_other" ? "disabled" : "";
   const selected = item.state === "selected_by_user" ? "selected" : "";
-  const status =
-    item.state === "selected_by_other"
-      ? `Занято: ${item.claimedBy || "Другой гость"}`
-      : item.state === "selected_by_user"
-      ? "Вы выбрали"
-      : "Доступно";
+  const paidText =
+    item.status === "locked" && item.paidAt
+      ? `${item.paidBy || "Гость"} · ${item.paidAt.toLocaleTimeString("ru-RU", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`
+      : "";
 
   return `
     <div class="entry-item ${disabled} ${selected}" data-id="${item.id}">
       <img class="entry-item__image" src="${item.imageUrl}" alt="${item.name}" />
       <div class="entry-item__info">
         <div class="entry-item__title">${item.name}</div>
-        <div class="entry-item__meta">${status}</div>
+        <div class="entry-item__price">${format(item.price)}</div>
+        ${paidText ? `<div class="entry-item__meta">${paidText}</div>` : ""}
       </div>
       <div class="entry-item__right">
-        <div class="entry-item__price">${format(item.price)}</div>
         <div class="entry-item__check"></div>
       </div>
     </div>
