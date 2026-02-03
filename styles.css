@@ -57,29 +57,38 @@ body {
   z-index: 5;
 }
 
-.brand {
-  font-weight: 700;
+.brand-pill {
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px 16px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+}
+
+.brand-text {
+  font-weight: 900;
   letter-spacing: 1px;
   text-transform: uppercase;
+  font-size: 20px;
 }
 
 .menu {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 14px;
   border: none;
   background: #fff;
   display: grid;
-  gap: 4px;
-  padding: 10px;
+  gap: 3px;
+  padding: 8px;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
 }
 
 .menu span {
   display: block;
   height: 2px;
   background: #1d1b22;
+  border-radius: 2px;
 }
 
 .screen {
