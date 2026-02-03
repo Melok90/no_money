@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Нет монет — QR Bill Payment</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">нет монет</div>
+        <button class="menu" aria-label="Menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </header>
+
+      <main class="screen" id="screen-root">
+        <!-- Screens injected by JS -->
+      </main>
+
+      <footer class="helper">
+        <div class="helper__dot"></div>
+        <div class="helper__text">Синхронизация счёта в реальном времени</div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
