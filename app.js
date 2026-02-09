@@ -2,14 +2,14 @@ const screens = {
   BILL_OVERVIEW: "bill",
   PAYMENT_STRATEGY: "strategy",
   ITEM_SELECTION: "items",
-  CONFIRM_SELECTION: "confirm",
-  TIPS: "tips",
+  PAYMENT_DETAILS: "details",
   PAYMENT: "payment",
   SUCCESS: "success",
 };
 
 const state = {
   screen: screens.BILL_OVERVIEW,
+  history: [],
   strategy: "items",
   items: [
     {
@@ -18,6 +18,7 @@ const state = {
       imageUrl:
         "https://images.unsplash.com/photo-1525755662778-989d0524087e?w=600&auto=format&fit=crop&q=80",
       price: 680,
+      oldPrice: 720,
       status: "available",
       state: "available",
     },
@@ -49,12 +50,42 @@ const state = {
       status: "available",
       state: "available",
     },
+    {
+      id: "soup",
+      name: "Тыквенный суп",
+      imageUrl:
+        "https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?w=600&auto=format&fit=crop&q=80",
+      price: 390,
+      status: "available",
+      state: "available",
+    },
+    {
+      id: "steak",
+      name: "Стейк из говядины",
+      imageUrl:
+        "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80",
+      price: 1260,
+      status: "available",
+      state: "available",
+    },
+    {
+      id: "salad",
+      name: "Салат с креветками",
+      imageUrl:
+        "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=600&auto=format&fit=crop&q=80",
+      price: 520,
+      status: "available",
+      state: "available",
+    },
   ],
   selection: {},
-  tipPercent: 10,
+  tipPercent: 0,
   tipCustom: "",
+  tipCustomActive: false,
+  payerName: "Гость",
   paymentMethod: "sbp",
   paidAt: null,
+  paymentLocked: false,
   activeUsers: 3,
 };
 
@@ -70,7 +101,7 @@ const subtotal = () => {
 
 const tipAmount = () => {
   const base = subtotal();
-  if (state.tipCustom !== "") {
+  if (state.tipCustomActive) {
     const custom = Number(state.tipCustom);
     return Number.isFinite(custom) ? custom : 0;
   }
@@ -87,8 +118,19 @@ const remainingBill = () => {
   return total - paid;
 };
 
-const setScreen = (screen) => {
+const setScreen = (screen, options = {}) => {
+  const { replace = false } = options;
+  if (!replace && state.screen !== screen) {
+    state.history.push(state.screen);
+  }
   state.screen = screen;
+  render();
+};
+
+const goBack = () => {
+  const prev = state.history.pop();
+  if (!prev) return;
+  state.screen = prev;
   render();
 };
 
@@ -202,8 +244,12 @@ const renderBillOverview = () => {
       }>
         Оплатить выбранное
       </button>
-      <button class="cta cta--dark" id="split-bill">Разделить счёт</button>
-      <button class="cta cta--ghost" id="pay-all">Оплатить всё</button>
+      <button class="cta cta--dark" id="split-bill" disabled>
+        Разделить счёт
+      </button>
+      <button class="cta cta--ghost" id="pay-all" disabled>
+        Оплатить всё
+      </button>
     </div>
   `;
 
@@ -222,15 +268,7 @@ const renderBillOverview = () => {
 
   document.getElementById("pay-selected").onclick = () => {
     if (!hasSelection()) return;
-    setScreen(screens.CONFIRM_SELECTION);
-  };
-  document.getElementById("split-bill").onclick = () => {
-    setStrategy("split");
-    setScreen(screens.ITEM_SELECTION);
-  };
-  document.getElementById("pay-all").onclick = () => {
-    setStrategy("all");
-    setScreen(screens.ITEM_SELECTION);
+    setScreen(screens.PAYMENT_DETAILS);
   };
 };
 
@@ -306,6 +344,7 @@ const renderItems = () => {
   const allMode = state.strategy === "all";
 
   root.innerHTML = `
+    <button class="back-link" id="back-to-bill">Назад</button>
     <section class="card">
       <h1 class="card__title">Выберите свои позиции</h1>
       <p class="card__subtitle">${
@@ -360,9 +399,12 @@ const renderItems = () => {
   if (continueBtn) {
     continueBtn.onclick = () => {
       if (!hasSelection()) return;
-      setScreen(screens.CONFIRM_SELECTION);
+      setScreen(screens.PAYMENT_DETAILS);
     };
   }
+
+  document.getElementById("back-to-bill").onclick = () =>
+    goBack();
 };
 
 const renderItem = (item) => {
@@ -413,119 +455,221 @@ const renderItem = (item) => {
   `;
 };
 
-const renderConfirm = () => {
-  const selectionList = Object.values(state.selection)
-    .map(
-      (item) => `
-        <div class="item__row">
-          <div>${item.name}</div>
-          <strong>${format(item.amount)}</strong>
+const renderPaymentDetails = () => {
+  const orderItems = Object.values(state.selection)
+    .map((item) => {
+      const fullItem = state.items.find((entry) => entry.id === item.id);
+      const oldPrice = fullItem?.oldPrice;
+      return `
+        <div class="order-item">
+          <div>
+            <div class="order-item__title">${item.name}</div>
+            <div class="order-item__meta">1 порция</div>
+          </div>
+          <div class="order-item__price">
+            <span>${format(item.amount)}</span>
+            ${
+              oldPrice
+                ? `<span class="order-item__old">${format(oldPrice)}</span>`
+                : ""
+            }
+          </div>
         </div>
-      `
-    )
+      `;
+    })
     .join("");
 
   root.innerHTML = `
-    <section class="card">
-      <h1 class="card__title">Подтвердите выбор</h1>
-      <p class="card__subtitle">Позиции будут заблокированы для других гостей.</p>
-      <div class="list">${selectionList}</div>
-      <div class="status">
-        <div>Итого</div>
-        <strong>${format(subtotal())}</strong>
+    <div class="stepper">
+      <div class="stepper__track">
+        <span class="stepper__bar"></span>
+        <span class="stepper__bar"></span>
+        <span class="stepper__bar"></span>
+        <span class="stepper__bar"></span>
       </div>
-      <div class="note" style="margin-top: 14px;">
-        После подтверждения эти позиции станут недоступны другим гостям.
+      <div class="stepper__meta">
+        <span>Шаг 2 из 4</span>
+        <span>Готово</span>
+      </div>
+    </div>
+
+    <section class="pd-section">
+      <div class="pd-label">Ваш заказ</div>
+      <div class="pd-card order-list">${orderItems}</div>
+    </section>
+
+    <section class="pd-section">
+      <div class="pd-label">Как вас указать в счёте?</div>
+      <div class="pd-card">
+        <input
+          class="pd-input"
+          type="text"
+          id="payer-name"
+          value="${state.payerName}"
+          placeholder="Гость"
+        />
       </div>
     </section>
-    <section class="card inline-actions">
-      <button class="cta cta--ghost" id="back-items">Назад</button>
-      <button class="cta cta--primary" id="proceed-payment">К оплате</button>
+
+    <section class="pd-section">
+      <div class="pd-header">
+        <div class="pd-label">Чаевые официанту</div>
+        <div class="pd-amount">${format(tipAmount())}</div>
+      </div>
+      <div class="pd-tip-grid">
+        ${renderTipAmount(0, "0 ₽")}
+        ${renderTipAmount(5, "5%")}
+        ${renderTipAmount(10, "10%")}
+        ${renderTipAmount(15, "15%")}
+      </div>
+      <button class="pd-tip custom-tip ${state.tipCustomActive ? "active" : ""}" data-tip="custom">
+        Своя сумма
+      </button>
+      ${
+        state.tipCustomActive
+          ? `<div class="pd-input-wrap">
+              <input class="pd-input" type="text" placeholder="Введите сумму, ₽" id="tip-input" value="${state.tipCustom}" />
+            </div>`
+          : ""
+      }
+      <div class="pd-disclaimer">
+        Чаевые полностью переводятся официанту. Мы не удерживаем комиссию.
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="summary-list">
+        <div class="summary-row">
+          <span>Блюда</span>
+          <strong>${format(subtotal())}</strong>
+        </div>
+        <div class="summary-row">
+          <span>Чаевые</span>
+          <strong>${format(tipAmount())}</strong>
+        </div>
+        <div class="summary-row summary-total">
+          <span>Итого</span>
+          <strong>${format(totalPayable())}</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <button class="cta cta--primary" id="pay-now" ${
+        state.paymentLocked ? "disabled" : ""
+      }>Оплатить</button>
+      <button class="cta cta--back" id="back-to-items">Назад</button>
     </section>
   `;
 
-  document.getElementById("back-items").onclick = () =>
-    setScreen(screens.ITEM_SELECTION);
-  document.getElementById("proceed-payment").onclick = () =>
-    setScreen(screens.TIPS);
-};
+  document.getElementById("payer-name").oninput = (event) => {
+    state.payerName = event.target.value || "Гость";
+  };
 
-const renderTips = () => {
-  root.innerHTML = `
-    <section class="card">
-      <h1 class="card__title">Чаевые</h1>
-      <p class="card__subtitle">Чаевые считаются только от вашей суммы.</p>
-      <div class="tip-grid">
-        ${renderTip(0)}
-        ${renderTip(5)}
-        ${renderTip(10)}
-        <div class="tip ${state.tipCustom !== "" ? "active" : ""}" data-tip="custom">Своя сумма</div>
-      </div>
-      <input
-        class="input"
-        type="number"
-        placeholder="Введите сумму, ₽"
-        id="tip-input"
-        value="${state.tipCustom}"
-      />
-    </section>
-    <section class="card">
-      <button class="cta cta--primary" id="continue-tips">Продолжить</button>
-    </section>
-  `;
-
-  document.querySelectorAll(".tip").forEach((tip) => {
+  document.querySelectorAll(".pd-tip").forEach((tip) => {
     tip.onclick = () => {
       const value = tip.dataset.tip;
       if (value === "custom") {
-        state.tipCustom = state.tipCustom === "" ? "" : state.tipCustom;
+        state.tipCustomActive = true;
       } else {
         state.tipPercent = Number(value);
         state.tipCustom = "";
+        state.tipCustomActive = false;
       }
       render();
     };
   });
 
-  const input = document.getElementById("tip-input");
-  input.oninput = (event) => {
-    state.tipCustom = event.target.value;
-    render();
-  };
+  const tipInput = document.getElementById("tip-input");
+  if (tipInput) {
+    tipInput.oninput = (event) => {
+      state.tipCustom = event.target.value;
+      render();
+    };
+  }
 
-  document.getElementById("continue-tips").onclick = () =>
-    setScreen(screens.PAYMENT);
+  const payBtn = document.getElementById("pay-now");
+  if (payBtn) {
+    payBtn.onclick = () => {
+      if (state.paymentLocked) return;
+      state.paymentLocked = true;
+      setScreen(screens.PAYMENT);
+    };
+  }
+
+  document.getElementById("back-to-items").onclick = () =>
+    goBack();
 };
 
-const renderTip = (value) => {
-  const active = state.tipCustom === "" && state.tipPercent === value ? "active" : "";
-  return `<div class="tip ${active}" data-tip="${value}">${value}%</div>`;
+const renderTipAmount = (value, label) => {
+  const active =
+    !state.tipCustomActive && state.tipPercent === value ? "active" : "";
+  return `<div class="pd-tip ${active}" data-tip="${value}">${label}</div>`;
 };
 
 const renderPayment = () => {
   root.innerHTML = `
-    <section class="card">
-      <h1 class="card__title">Оплата</h1>
-      <p class="card__subtitle">Вы оплачиваете только выбранные позиции.</p>
-      <div class="status">
-        <div>К оплате</div>
-        <strong>${format(totalPayable())}</strong>
+    <div class="stepper payment-stepper">
+      <div class="stepper__track">
+        <span class="stepper__bar"></span>
+        <span class="stepper__bar"></span>
+        <span class="stepper__bar"></span>
+        <span class="stepper__bar"></span>
       </div>
-      <div class="note" style="margin-top: 14px;">
-        После оплаты официант получит уведомление автоматически.
+      <div class="stepper__meta">
+        <span>Шаг 3 из 4</span>
+        <span>Сумма к оплате ${format(totalPayable())}</span>
       </div>
+    </div>
+
+    <section class="payment-header">
+      <h1 class="payment-title">Способы оплаты</h1>
     </section>
-    <section class="card">
-      <div class="payment-methods">
-        ${renderPaymentMethod("sbp", "СБП")}
-        ${renderPaymentMethod("wallet", "Apple Pay / Google Pay")}
-        ${renderPaymentMethod("card", "Банковская карта")}
-      </div>
+
+    <section class="payment-list">
+      ${renderPaymentMethod(
+        "sbp",
+        "СБП",
+        "Система быстрых платежей",
+        "sbp"
+      )}
+      ${renderPaymentMethod(
+        "sberpay",
+        "SberPay",
+        "Оплата через СберБанк Онлайн",
+        "sber"
+      )}
+      ${renderPaymentMethod(
+        "tbank",
+        "Т-Банк",
+        "Быстрая оплата картой Т-Банка",
+        "tbank"
+      )}
+      ${renderPaymentMethod(
+        "alfabank",
+        "Альфа-Банк",
+        "Альфа-Клик или карта",
+        "alfa"
+      )}
+      ${renderPaymentMethod(
+        "vtb",
+        "ВТБ",
+        "Оплата через ВТБ Онлайн",
+        "vtb"
+      )}
+      ${renderPaymentMethod(
+        "other",
+        "Другой банк по СБП",
+        "Выбор из списка банков",
+        "bank"
+      )}
     </section>
+
     <section class="card">
       <button class="cta cta--primary" id="pay">Оплатить ${format(
         totalPayable()
       )}</button>
+      <button class="cta cta--back" id="back-to-details">Назад</button>
     </section>
   `;
 
@@ -541,14 +685,25 @@ const renderPayment = () => {
     state.paidAt = new Date();
     setScreen(screens.SUCCESS);
   };
+
+  document.getElementById("back-to-details").onclick = () =>
+    goBack();
 };
 
-const renderPaymentMethod = (id, label) => {
+const renderPaymentMethod = (id, label, description, logo) => {
   const active = state.paymentMethod === id ? "active" : "";
   return `
     <div class="payment-method ${active}" data-method="${id}">
-      <div>${label}</div>
-      <div>${active ? "Выбрано" : ""}</div>
+      <div class="payment-method__left">
+        <div class="payment-method__logo payment-method__logo--${logo}">
+          ${logo ? logo.toUpperCase().slice(0, 2) : ""}
+        </div>
+        <div>
+          <div class="payment-method__title">${label}</div>
+          <div class="payment-method__meta">${description || ""}</div>
+        </div>
+      </div>
+      <div class="payment-method__radio ${active ? "active" : ""}"></div>
     </div>
   `;
 };
@@ -596,11 +751,17 @@ const renderSuccess = () => {
 
   document.getElementById("back-bill").onclick = () => {
     state.selection = {};
-    setScreen(screens.BILL_OVERVIEW);
+    state.paymentLocked = false;
+    state.history = [];
+    setScreen(screens.BILL_OVERVIEW, { replace: true });
   };
 };
 
 const render = () => {
+  root.className = "screen";
+  if (state.screen === screens.BILL_OVERVIEW) {
+    root.classList.add("screen--has-sticky");
+  }
   switch (state.screen) {
     case screens.BILL_OVERVIEW:
       renderBillOverview();
@@ -611,11 +772,8 @@ const render = () => {
     case screens.ITEM_SELECTION:
       renderItems();
       break;
-    case screens.CONFIRM_SELECTION:
-      renderConfirm();
-      break;
-    case screens.TIPS:
-      renderTips();
+    case screens.PAYMENT_DETAILS:
+      renderPaymentDetails();
       break;
     case screens.PAYMENT:
       renderPayment();
