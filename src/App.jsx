@@ -255,7 +255,6 @@ const {
   Trash2,
   LayoutGrid,
   X,
-  Target,
   Pencil,
   Settings,
   Download,
@@ -806,11 +805,8 @@ function App() {
               currentMonthStats={currentMonthStats}
               categoryStats={currentMonthCategoryStats}
               expenseCategories={expenseCategories}
-              goals={goals}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
-              openCreateGoal={openCreateGoal}
-              setSelectedGoal={setSelectedGoal}
               setSelectedCategory={setSelectedCategory}
               onEditBalance={() => setIsEditBalanceOpen(true)}
               openSettings={() => setIsSettingsOpen(true)}
@@ -915,11 +911,8 @@ const HomeView = ({
   currentMonthStats,
   categoryStats,
   expenseCategories,
-  goals,
   searchQuery,
   setSearchQuery,
-  openCreateGoal,
-  setSelectedGoal,
   setSelectedCategory,
   onEditBalance,
   openSettings,
@@ -1000,60 +993,6 @@ const HomeView = ({
             </div>
           </div>
 
-          <div className="mb-8">
-            <div className="mb-3 flex items-center justify-between px-1">
-              <h3 className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-slate-500">
-                <Target size={14} /> Мои цели
-              </h3>
-              {goals.length > 0 && <button className="text-xs font-bold text-[#5856D6]">Все</button>}
-            </div>
-
-            {goals.length === 0 ? (
-              <button
-                onClick={openCreateGoal}
-                className="group flex w-full flex-col items-center justify-center gap-3 rounded-[24px] border-2 border-dashed border-white/10 bg-[#1c1c1e] p-6 transition-colors hover:bg-[#252527]"
-              >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#5856D6]/20 transition-transform group-hover:scale-110">
-                  <Plus className="text-[#5856D6]" size={24} />
-                </div>
-                <span className="font-medium text-slate-400">Создать первую цель</span>
-              </button>
-            ) : (
-              <div className="scrollbar-hide -mx-4 flex gap-3 overflow-x-auto px-4 pb-4">
-                {goals.map((goal) => {
-                  const percent = goal.target > 0 ? Math.min(100, Math.round((goal.current / goal.target) * 100)) : 0;
-                  return (
-                    <div
-                      key={goal.id}
-                      onClick={() => setSelectedGoal(goal)}
-                      className="group relative min-w-[160px] overflow-hidden rounded-[24px] border border-white/5 bg-[#1c1c1e] p-4 shadow-lg transition-transform active:scale-95"
-                    >
-                      <div className="mb-3 flex items-start justify-between">
-                        <span className="text-2xl">{goal.emoji}</span>
-                        <div className="relative flex h-10 w-10 items-center justify-center">
-                          <CircleProgress percentage={percent} color={goal.color} size={40} strokeWidth={4} />
-                          <span className="absolute text-[10px] font-bold text-white">{percent}%</span>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="mb-0.5 truncate text-sm font-bold text-white">{goal.name}</p>
-                        <p className="text-[10px] font-medium text-slate-500">
-                          {goal.current >= 1000 ? `${(goal.current / 1000).toFixed(0)}k` : goal.current} /{' '}
-                          {(goal.target / 1000).toFixed(0)}k ₽
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-                <button
-                  onClick={openCreateGoal}
-                  className="flex min-w-[60px] items-center justify-center rounded-[24px] border border-dashed border-white/5 bg-[#1c1c1e]/30 transition-colors hover:bg-[#1c1c1e]/50"
-                >
-                  <Plus className="text-slate-600" />
-                </button>
-              </div>
-            )}
-          </div>
         </>
       )}
 
