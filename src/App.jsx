@@ -54,6 +54,15 @@ const normalizeTransactions = (items) =>
     };
   });
 
+const parseMoneyInput = (value) => {
+  if (typeof value === 'number') return value;
+  const normalized = String(value ?? '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(',', '.');
+  return Number.parseFloat(normalized);
+};
+
 const FIREBASE_CONFIG =
   parseMaybeJson(import.meta.env.VITE_FIREBASE_CONFIG) ||
   parseMaybeJson(typeof window !== 'undefined' ? window.__firebase_config : null);
@@ -697,19 +706,34 @@ function App() {
   };
 
   const handleSaveGoal = (goalData) => {
+    const normalizedName = String(goalData?.name ?? '').trim();
+    const numericTarget = parseMoneyInput(goalData?.target);
+
+    if (!normalizedName || !Number.isFinite(numericTarget) || numericTarget <= 0) {
+      return false;
+    }
+
+    const normalizedGoalData = {
+      ...goalData,
+      name: normalizedName,
+      target: numericTarget
+    };
+
     let newGoals;
 
     if (editingGoalData) {
       newGoals = goals.map((goal) =>
-        goal.id === editingGoalData.id ? { ...goal, ...goalData } : goal
+        goal.id === editingGoalData.id ? { ...goal, ...normalizedGoalData } : goal
       );
     } else {
-      newGoals = [...goals, { id: Date.now(), current: 0, ...goalData }];
+      newGoals = [...goals, { id: Date.now(), current: 0, ...normalizedGoalData }];
     }
 
     updateStateAndCloud({ goals: newGoals });
     setIsGoalFormOpen(false);
     setEditingGoalData(null);
+    setSearchQuery('');
+    return true;
   };
 
   const handleTopUpGoal = (goalId, amount) => {
@@ -1987,17 +2011,27 @@ const GoalDetailSheet = ({ goal, onClose, onTopUp, onEdit, onDelete }) => {
 
 const GoalFormSheet = ({ initialData, onClose, onSave }) => {
   const [name, setName] = useState(initialData?.name || '');
-  const [target, setTarget] = useState(initialData?.target || '');
+  const [target, setTarget] = useState(
+    initialData?.target !== undefined && initialData?.target !== null ? String(initialData.target) : ''
+  );
   const [emoji, setEmoji] = useState(initialData?.emoji || '🎯');
   const [color, setColor] = useState(initialData?.color || '#5856D6');
+  const [error, setError] = useState('');
 
   const colors = ['#5856D6', '#34C759', '#FF9500', '#FF2D55', '#AF52DE', '#007AFF'];
   const emojis = ['🎯', '💻', '🚗', '🏠', '✈️', '🏝️', '💍', '🎁', '🔧'];
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (!name || !target) return;
-    onSave({ name, target: parseFloat(target), emoji, color });
+    const targetValue = parseMoneyInput(target);
+    if (!name.trim() || !Number.isFinite(targetValue) || targetValue <= 0) {
+      setError('Введите название и сумму цели больше нуля.');
+      return;
+    }
+    const saved = onSave({ name: name.trim(), target, emoji, color });
+    if (!saved) {
+      setError('Не удалось сохранить цель. Проверьте данные и попробуйте снова.');
+    }
   };
 
   return (
@@ -2017,7 +2051,10 @@ const GoalFormSheet = ({ initialData, onClose, onSave }) => {
             <input
               type="text"
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                if (error) setError('');
+              }}
               placeholder="Например, MacBook"
               className="w-full rounded-xl bg-[#2c2c2e] px-4 py-3 text-[16px] text-white focus:outline-none focus:ring-1 focus:ring-[#5856D6]"
               autoFocus
@@ -2028,16 +2065,21 @@ const GoalFormSheet = ({ initialData, onClose, onSave }) => {
             <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-zinc-500">Сумма цели</label>
             <div className="relative">
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
                 value={target}
-                onChange={(event) => setTarget(event.target.value)}
+                onChange={(event) => {
+                  setTarget(event.target.value);
+                  if (error) setError('');
+                }}
                 placeholder="0"
                 className="w-full rounded-xl bg-[#2c2c2e] px-4 py-3 pl-8 text-[16px] text-white focus:outline-none focus:ring-1 focus:ring-[#5856D6]"
               />
               <span className="absolute left-4 top-3 text-zinc-500">₽</span>
             </div>
           </div>
+
+          {error && <p className="text-sm text-red-400">{error}</p>}
 
           <div>
             <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-zinc-500">Иконка</label>
