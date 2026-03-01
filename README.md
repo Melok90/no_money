@@ -1,31 +1,37 @@
-# Нет монет — QR Bill Payment (Wireflow Prototype)
+# Finance Tracker (PWA UI)
 
-Интерактивный мобильный прототип сценария «Pay for My Own Dish» без логина.
+React + Vite версия вашего Finance Tracker без CDN/Babel в рантайме.
 
-## Как запустить
+## Что сделано
+- Перенос из одного HTML в проектную структуру (`src/`, `package.json`, Vite).
+- Tailwind подключен через сборку (PostCSS), а не через runtime CDN.
+- Firebase конфиг вынесен в `.env` (`VITE_FIREBASE_CONFIG`) вместо редактирования кода.
+- Сохранены все основные экраны: главная, аналитика, цели, категории, импорт/экспорт, облачная синхронизация.
 
-Вариант 1: открыть файл напрямую
-- Откройте `index.html` в браузере.
-
-Вариант 2: локальный сервер
+## Локальный запуск
 ```bash
-python3 -m http.server 5173
+npm install
+npm run dev
 ```
-Затем откройте `http://localhost:5173`.
 
-## Что реализовано
-- Полный сценарий экранов: BILL_OVERVIEW → PAYMENT_STRATEGY → ITEM_SELECTION → CONFIRM_SELECTION → TIPS → PAYMENT → SUCCESS
-- Реальные состояния позиций: доступно / занято / оплачено
-- Блокировка оплаченных позиций после успешной оплаты
-- Подсчет суммы, чаевых и финальной оплаты
-- Мок обновлений в реальном времени (имитация занятых позиций)
-
-## Публикация на GitHub
+## Сборка
 ```bash
-git init
-git add .
-git commit -m "Add wireflow prototype"
-git branch -M main
-git remote add origin <YOUR_REPO_URL>
-git push -u origin main
+npm run build
+npm run preview
 ```
+
+## Firebase
+1. Создай `.env` на основе `.env.example`.
+2. Заполни `VITE_FIREBASE_CONFIG` JSON-строкой.
+3. (Опционально) задай `VITE_APP_ID`.
+
+Если `VITE_FIREBASE_CONFIG` не задан, приложение работает только на `localStorage`.
+
+## GitHub Pages
+Для репозитория `Melok90/no_money`:
+```bash
+npm install
+npm run deploy
+```
+
+`deploy` использует `base=/no_money/` и публикует `dist/` через `gh-pages`.
